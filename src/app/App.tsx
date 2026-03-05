@@ -1,5 +1,5 @@
 import { RouterProvider } from 'react-router';
-import { router } from './routes';
+import { router } from './routes-health';
 import { Toaster } from './components/ui/sonner';
 
 function App() {

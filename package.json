@@ -1,15 +1,16 @@
 {
-  "name": "retirement-planner",
+  "name": "ai-health-report-assistant",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "智慧养老规划助手 - AI驱动的养老自助规划工具",
+  "description": "AI健康报告解读与持续管理助手 - 体检报告AI解读与健康档案管理工具",
   "keywords": [
-    "retirement",
-    "financial-planning",
+    "health",
+    "medical-report",
     "ai-assistant",
-    "elderly-care",
-    "养老规划"
+    "health-management",
+    "体检报告",
+    "健康管理"
   ],
   "author": "",
   "license": "MIT",
