@@ -1,47 +1,32 @@
 // 首页仪表盘
 import { useNavigate } from 'react-router';
-import { useEffect, useState } from 'react';
-import { TrendingUp, Activity, Target, ArrowRight, Calendar } from 'lucide-react';
+import { useEffect } from 'react';
+import { TrendingUp, Activity, Target, ArrowRight, Calendar, MessageSquare } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Progress } from '../../components/ui/progress';
-import { 
-  indicatorStorage, 
-  suggestionStorage, 
-  familyMemberStorage 
-} from '../../utils/health-storage';
-import { HealthIndicator, AISuggestion } from '../../types/health';
+import { MemberSelector } from '../../components/MemberSelector';
+import { useMembers, useHealthRecords } from '../../hooks/useMembers';
+import { AbnormalIndicator } from '../../types/member';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const [urgentIndicator, setUrgentIndicator] = useState<HealthIndicator | null>(null);
-  const [suggestions, setSuggestions] = useState<AISuggestion[]>([]);
-  const [completionRate, setCompletionRate] = useState(0);
+  const { members, currentMemberId, setCurrentMemberId } = useMembers();
+  const { records, latestRecord } = useHealthRecords(currentMemberId);
 
-  useEffect(() => {
-    // 获取当前用户（本人）
-    const members = familyMemberStorage.getAll();
-    const primaryMember = members.find(m => m.isPrimary);
-    
-    if (primaryMember) {
-      // 获取异常指标
-      const abnormalIndicators = indicatorStorage.getAbnormal(primaryMember.id);
-      if (abnormalIndicators.length > 0) {
-        // 选择最严重的指标
-        const critical = abnormalIndicators.find(i => i.status === 'critical');
-        setUrgentIndicator(critical || abnormalIndicators[0]);
-      }
+  // 从最新记录中获取数据
+  const urgentIndicator = latestRecord?.abnormalIndicators.find(
+    i => i.status === 'critical'
+  ) || latestRecord?.abnormalIndicators[0] || null;
 
-      // 获取AI建议
-      const allSuggestions = suggestionStorage.getAll();
-      setSuggestions(allSuggestions.slice(0, 3));
-      
-      // 计算完成率
-      const completed = allSuggestions.filter(s => s.completed).length;
-      const total = allSuggestions.length;
-      setCompletionRate(total > 0 ? Math.round((completed / total) * 100) : 0);
-    }
-  }, []);
+  // 模拟AI建议数据（后续从记录中提取）
+  const suggestions = latestRecord ? [
+    { id: '1', category: '饮食调整', content: latestRecord.dietSuggestions.slice(0, 50) + '...', completed: false, timestamp: '2天前', source: '最新报告' },
+    { id: '2', category: '运动建议', content: latestRecord.exerciseSuggestions.slice(0, 50) + '...', completed: false, timestamp: '2天前', source: '最新报告' },
+    { id: '3', category: '药物建议', content: latestRecord.medicationSuggestions.slice(0, 50) + '...', completed: false, timestamp: '2天前', source: '最新报告' },
+  ] : [];
+
+  const completionRate = 0; // 后续实现进度追踪
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -53,6 +38,23 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* 顶部：成员切换器和AI助手 */}
+      <div className="flex items-center justify-between">
+        <MemberSelector 
+          members={members}
+          currentMemberId={currentMemberId}
+          onMemberChange={setCurrentMemberId}
+        />
+        
+        <Button 
+          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          onClick={() => navigate('/chat')}
+        >
+          <MessageSquare className="w-4 h-4 mr-2" />
+          AI对话 · 上传报告
+        </Button>
+      </div>
+
       {/* AI健康助手欢迎卡片 */}
       <Card className="p-6 bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-200">
         <div className="flex items-center gap-4">
@@ -63,23 +65,44 @@ export default function DashboardPage() {
             <h1 className="text-xl font-bold text-gray-900 mb-1">AI健康助手</h1>
             <p className="text-sm text-gray-600">持续守护您的健康 · 一次上传，终身陪伴</p>
           </div>
-          <Button 
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-            onClick={() => navigate('/chat')}
-          >
-            开始对话
-          </Button>
         </div>
       </Card>
 
-      {/* 页面标题 */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">健康概览</h2>
-        <p className="text-gray-600 mt-1">您的健康状况一目了然</p>
-      </div>
+      {/* 空状态：首次使用引导 */}
+      {records.length === 0 ? (
+        <Card className="p-12 text-center border-2 border-dashed">
+          <div className="max-w-md mx-auto">
+            <Activity className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              还没有健康记录
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {members.length === 0 
+                ? '开始您的健康管理之旅，在AI对话中上传第一份健康报告'
+                : `${members.find(m => m.id === currentMemberId)?.name || '该成员'}还没有上传报告，前往AI对话上传吧`
+              }
+            </p>
+            <Button 
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              onClick={() => navigate('/chat')}
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              前往AI对话
+            </Button>
+          </div>
+        </Card>
+      ) : (
+        <>
+          {/* 页面标题 */}
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">健康概览</h2>
+            <p className="text-gray-600 mt-1">
+              {members.find(m => m.id === currentMemberId)?.name || '成员'}的健康状况一目了然
+            </p>
+          </div>
 
-      {/* 健康快照卡片 - 三列布局 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* 健康快照卡片 - 三列布局 */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 今日关注 */}
         <Card className="p-6 border-2">
           <div className="flex items-center gap-3 mb-4">
@@ -204,53 +227,59 @@ export default function DashboardPage() {
           </div>
         </Card>
       </div>
+        </>
+      )}
 
       {/* 近期AI互动摘要 */}
-      <Card className="p-6 border-2">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">近期AI互动</h3>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => navigate('/chat')}
-          >
-            查看更多
-            <ArrowRight className="w-4 h-4 ml-1" />
-          </Button>
-        </div>
-
-        <div className="space-y-4">
-          {suggestions.map((sug) => (
-            <div key={sug.id} className="flex gap-4 p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
+      {records.length > 0 && suggestions.length > 0 && (
+        <Card className="p-6 border-2">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">近期AI互动</h3>
+            <Button 
+              variant="ghost" 
+              size="sm"
               onClick={() => navigate('/chat')}
             >
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-white" />
+              查看更多
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            {suggestions.map((sug) => (
+              <div key={sug.id} className="flex gap-4 p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
+                onClick={() => navigate('/chat')}
+              >
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-white" />
+                  </div>
                 </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs text-gray-500">{sug.timestamp}</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                    {sug.category}
-                  </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs text-gray-500">{sug.timestamp}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                      {sug.category}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-900 mb-1">{sug.content}</p>
+                  <p className="text-xs text-gray-500">依据 {sug.source}</p>
                 </div>
-                <p className="text-sm text-gray-900 mb-1">{sug.content}</p>
-                <p className="text-xs text-gray-500">依据 {sug.source}</p>
+                <Button variant="ghost" size="sm">
+                  继续对话
+                </Button>
               </div>
-              <Button variant="ghost" size="sm">
-                继续对话
-              </Button>
-            </div>
-          ))}
-        </div>
-      </Card>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* 合规脚注 */}
-      <div className="text-xs text-gray-500 text-center py-4 border-t">
-        ℹ️ 以上信息基于您的健康档案生成，仅供参考。个体情况请咨询专业医师。
-      </div>
+      {records.length > 0 && (
+        <div className="text-xs text-gray-500 text-center py-4 border-t">
+          ℹ️ 以上信息基于健康档案生成，仅供个人参考。具体诊疗请咨询专业医师。
+        </div>
+      )}
     </div>
   );
 }

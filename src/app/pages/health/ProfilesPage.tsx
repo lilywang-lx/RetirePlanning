@@ -1,33 +1,17 @@
 // 健康档案 - AI建议中心页面
 import { useState, useEffect } from 'react';
-import { Plus, MoreVertical, Apple, Pill, Dumbbell, Heart, ChevronRight, TrendingUp, TrendingDown, CheckCircle2, AlertCircle, Minus } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { Apple, Pill, Dumbbell, MessageSquare } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Avatar, AvatarFallback } from '../../components/ui/avatar';
-import { Badge } from '../../components/ui/badge';
-import { ScrollArea } from '../../components/ui/scroll-area';
-import { familyMemberStorage } from '../../utils/health-storage';
-import { FamilyMember } from '../../types/health';
+import { MemberSelector } from '../../components/MemberSelector';
+import { useMembers, useHealthRecords } from '../../hooks/useMembers';
+import { AbnormalIndicator } from '../../types/member';
 
 export default function ProfilesPage() {
-  const [members, setMembers] = useState<FamilyMember[]>([]);
-  const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
-
-  useEffect(() => {
-    loadMembers();
-  }, []);
-
-  const loadMembers = () => {
-    const allMembers = familyMemberStorage.getAll();
-    setMembers(allMembers);
-    if (allMembers.length > 0 && !selectedMember) {
-      setSelectedMember(allMembers.find(m => m.isPrimary) || allMembers[0]);
-    }
-  };
-
-  const handleMemberSelect = (member: FamilyMember) => {
-    setSelectedMember(member);
-  };
+  const navigate = useNavigate();
+  const { members, currentMemberId, setCurrentMemberId } = useMembers();
+  const { records, latestRecord } = useHealthRecords(currentMemberId);
 
   // AI建议数据
   const dietPlan = {
@@ -208,54 +192,94 @@ export default function ProfilesPage() {
 
   return (
     <div className="space-y-6">
-      {/* 页面标题与成员选择 */}
+      {/* 顶部：成员切换器和操作按钮 */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">健康档案</h1>
-          <p className="text-gray-600 mt-1">AI个性化健康建议</p>
+        <div className="flex items-center gap-4">
+          <MemberSelector 
+            members={members}
+            currentMemberId={currentMemberId}
+            onMemberChange={setCurrentMemberId}
+          />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">健康档案</h1>
+            <p className="text-gray-600 mt-1">AI个性化健康建议</p>
+          </div>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          添加家庭成员
+        
+        <Button 
+          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          onClick={() => navigate('/chat')}
+        >
+          <MessageSquare className="w-4 h-4 mr-2" />
+          前往AI对话
         </Button>
       </div>
 
-      {/* 成员选择卡片 */}
-      <ScrollArea className="w-full">
-        <div className="flex gap-3 pb-2">
-          {members.map((member) => (
-            <Card
-              key={member.id}
-              className={`
-                p-4 cursor-pointer transition-all hover:shadow-md flex-shrink-0 w-40
-                ${selectedMember?.id === member.id ? 'ring-2 ring-blue-500 border-blue-500 bg-blue-50' : ''}
-              `}
-              onClick={() => handleMemberSelect(member)}
+      {records.length === 0 ? (
+        <Card className="p-12 text-center border-2 border-dashed">
+          <div className="max-w-md mx-auto">
+            <MessageSquare className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              还没有健康档案
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {members.length === 0 
+                ? '开始您的健康管理之旅，在AI对话中上传第一份健康报告'
+                : `${members.find(m => m.id === currentMemberId)?.name || '该成员'}还没有上传报告，前往AI对话上传吧`
+              }
+            </p>
+            <Button 
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              onClick={() => navigate('/chat')}
             >
-              <div className="flex flex-col items-center text-center">
-                <div className="relative mb-2">
-                  <Avatar className="w-14 h-14">
-                    <AvatarFallback className="bg-gradient-to-br from-blue-400 to-blue-600 text-white text-lg font-bold">
-                      {member.name[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  {member.isPrimary && (
-                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center">
-                      <span className="text-xs">★</span>
+              <MessageSquare className="w-4 h-4 mr-2" />
+              前往AI对话上传报告
+            </Button>
+          </div>
+        </Card>
+      ) : (
+        <>
+          {/* AI建议内容 */}
+          {reports.length > 0 && (
+            <Card className="p-6 border-2">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-900">健康报告</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowUploadDialog(true)}
+                >
+                  <Upload className="w-4 h-4 mr-1" />
+                  上传新报告
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {reports.map(report => (
+                  <div
+                    key={report.id}
+                    className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-lg p-4 border-2 border-gray-200 hover:border-blue-400 transition-all cursor-pointer hover:shadow-md"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <FileText className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 text-sm truncate mb-1">
+                          {report.fileName}
+                        </h4>
+                        <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+                          <Clock className="w-3 h-3" />
+                          {report.uploadTime}
+                        </div>
+                        {getReportStatusBadge(report.status)}
+                      </div>
                     </div>
-                  )}
-                </div>
-                <h3 className="font-medium text-gray-900 text-sm">{member.name}</h3>
-                <p className="text-xs text-gray-600">{member.relationship}</p>
-                <p className="text-xs text-gray-500 mt-1">{member.age}岁</p>
+                  </div>
+                ))}
               </div>
             </Card>
-          ))}
-        </div>
-      </ScrollArea>
+          )}
 
-      {selectedMember && (
-        <>
           {/* 健康状态概览 */}
           <Card className="p-6 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-200">
             <div className="flex items-start justify-between mb-4">
@@ -263,7 +287,11 @@ export default function ProfilesPage() {
                 <h2 className="text-xl font-bold text-gray-900 mb-1">
                   {selectedMember.name} 的健康方案
                 </h2>
-                <p className="text-sm text-gray-600">基于2024年度体检报告生成</p>
+                <p className="text-sm text-gray-600">
+                  {reports.length > 0 
+                    ? `基于 ${reports[reports.length - 1].fileName} 生成`
+                    : '等待上传体检报告'}
+                </p>
               </div>
               <Badge className="bg-blue-100 text-blue-700 border-blue-300">AI生成</Badge>
             </div>
@@ -600,8 +628,8 @@ export default function ProfilesPage() {
 
           {/* 合规脚注 */}
           <div className="text-xs text-gray-500 text-center py-4 border-t bg-gray-50 rounded-lg">
-            <p className="mb-1">ℹ️ 以上建议基于AI分析您的体检报告和权威医学指南生成</p>
-            <p>⚠️ 仅供健康管理参考，不作为医疗诊断依据，具体治疗方案请咨询专业医师</p>
+            <p className="mb-1">ℹ️ 以上建议基于AI分析健康报告和权威医学指南生成</p>
+            <p>⚠️ 仅供个人健康管理参考，不作为医疗诊断依据，具体治疗方案请咨询专业医师</p>
           </div>
         </>
       )}
