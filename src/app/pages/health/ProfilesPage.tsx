@@ -1,9 +1,10 @@
 // 健康档案 - AI建议中心页面
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Apple, Pill, Dumbbell, MessageSquare } from 'lucide-react';
+import { Apple, Pill, Dumbbell, MessageSquare, Heart, CheckCircle2, AlertCircle, TrendingUp, ChevronRight, Minus } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
 import { MemberSelector } from '../../components/MemberSelector';
 import { useMembers, useHealthRecords } from '../../hooks/useMembers';
 import { AbnormalIndicator } from '../../types/member';
@@ -239,58 +240,17 @@ export default function ProfilesPage() {
         </Card>
       ) : (
         <>
-          {/* AI建议内容 */}
-          {reports.length > 0 && (
-            <Card className="p-6 border-2">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">健康报告</h3>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setShowUploadDialog(true)}
-                >
-                  <Upload className="w-4 h-4 mr-1" />
-                  上传新报告
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {reports.map(report => (
-                  <div
-                    key={report.id}
-                    className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-lg p-4 border-2 border-gray-200 hover:border-blue-400 transition-all cursor-pointer hover:shadow-md"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-gray-900 text-sm truncate mb-1">
-                          {report.fileName}
-                        </h4>
-                        <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
-                          <Clock className="w-3 h-3" />
-                          {report.uploadTime}
-                        </div>
-                        {getReportStatusBadge(report.status)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-
           {/* 健康状态概览 */}
           <Card className="p-6 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-200">
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">
-                  {selectedMember.name} 的健康方案
+                  {members.find(m => m.id === currentMemberId)?.name || '未选择成员'} 的健康方案
                 </h2>
                 <p className="text-sm text-gray-600">
-                  {reports.length > 0 
-                    ? `基于 ${reports[reports.length - 1].fileName} 生成`
-                    : '等待上传体检报告'}
+                  {latestRecord 
+                    ? `基于最新健康记录生成 (${new Date(latestRecord.date).toLocaleDateString()})`
+                    : '基于AI健康管理建议'}
                 </p>
               </div>
               <Badge className="bg-blue-100 text-blue-700 border-blue-300">AI生成</Badge>

@@ -1,10 +1,11 @@
 // AI对话中心页面 - 按话题组织对话
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
+import { SaveHealthRecordDialog } from '../../components/health/SaveHealthRecordDialog';
 import { 
   Send, Sparkles, Search, Paperclip, Image as ImageIcon, FileText, 
   X, Loader2, CheckCircle2, Plus, FileBarChart, Apple, Pill, 
-  Dumbbell, MessageCircle, Stethoscope, Calendar, PanelLeftClose, PanelLeft
+  Dumbbell, MessageCircle, Stethoscope, Calendar, PanelLeftClose, PanelLeft, Save
 } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -47,6 +48,7 @@ export default function ChatPage() {
   const [showNewTopicMenu, setShowNewTopicMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // 侧边栏显示状态
+  const [showSaveDialog, setShowSaveDialog] = useState(false); // 保存健康档案对话框
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -834,6 +836,17 @@ export default function ChatPage() {
                     )}
                   </div>
                 </div>
+                
+                {/* 保存到档案按钮 - 仅在报告类别显示 */}
+                {selectedConversation.category === 'report' && messages.length > 2 && (
+                  <Button
+                    onClick={() => setShowSaveDialog(true)}
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    保存到档案
+                  </Button>
+                )}
               </div>
             </Card>
 
@@ -1040,6 +1053,20 @@ export default function ChatPage() {
           </Card>
         )}
       </div>
+      
+      {/* 保存健康档案对话框 */}
+      {selectedConversation && (
+        <SaveHealthRecordDialog
+          open={showSaveDialog}
+          onOpenChange={setShowSaveDialog}
+          conversationId={selectedConversation.id}
+          conversationTopic={selectedConversation.topic}
+          onSaveSuccess={() => {
+            // 保存成功后可以跳转到健康档案页面
+            navigate('/profiles');
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -19,11 +19,32 @@ export default function DashboardPage() {
     i => i.status === 'critical'
   ) || latestRecord?.abnormalIndicators[0] || null;
 
-  // 模拟AI建议数据（后续从记录中提取）
+  // 从最新记录中提取AI建议
   const suggestions = latestRecord ? [
-    { id: '1', category: '饮食调整', content: latestRecord.dietSuggestions.slice(0, 50) + '...', completed: false, timestamp: '2天前', source: '最新报告' },
-    { id: '2', category: '运动建议', content: latestRecord.exerciseSuggestions.slice(0, 50) + '...', completed: false, timestamp: '2天前', source: '最新报告' },
-    { id: '3', category: '药物建议', content: latestRecord.medicationSuggestions.slice(0, 50) + '...', completed: false, timestamp: '2天前', source: '最新报告' },
+    { 
+      id: '1', 
+      category: '饮食调整', 
+      content: latestRecord.dietPlan?.recommendations[0]?.items[0]?.content || latestRecord.dietSuggestions || '查看详细饮食建议',
+      completed: false, 
+      timestamp: '2天前', 
+      source: '最新报告' 
+    },
+    { 
+      id: '2', 
+      category: '运动建议', 
+      content: latestRecord.fitnessPlan?.weeklyPlan[0]?.benefits || latestRecord.exerciseSuggestions || '查看详细运动方案',
+      completed: false, 
+      timestamp: '2天前', 
+      source: '最新报告' 
+    },
+    { 
+      id: '3', 
+      category: '药物建议', 
+      content: latestRecord.medicationPlan?.recommendations[0]?.advice || latestRecord.medicationSuggestions || '查看用药建议',
+      completed: false, 
+      timestamp: '2天前', 
+      source: '最新报告' 
+    },
   ] : [];
 
   const completionRate = 0; // 后续实现进度追踪
@@ -161,18 +182,23 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center justify-between py-2 border-b">
-              <span className="text-sm text-gray-600">尿酸</span>
-              <span className="text-sm font-medium text-orange-600">↑ 12.5%</span>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b">
-              <span className="text-sm text-gray-600">LDL-C</span>
-              <span className="text-sm font-medium text-orange-600">↑ 10.5%</span>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b">
-              <span className="text-sm text-gray-600">空腹血糖</span>
-              <span className="text-sm font-medium text-green-600">↑ 8.5%</span>
-            </div>
+            {latestRecord?.abnormalIndicators.slice(0, 3).map((indicator, idx) => (
+              <div key={idx} className="flex items-center justify-between py-2 border-b">
+                <span className="text-sm text-gray-600">{indicator.name}</span>
+                <span className={`text-sm font-medium ${
+                  indicator.trend === 'up' ? 'text-orange-600' :
+                  indicator.trend === 'down' ? 'text-green-600' :
+                  'text-gray-600'
+                }`}>
+                  {indicator.trend === 'up' ? '↑' : indicator.trend === 'down' ? '↓' : '→'} {indicator.trendValue || '监测中'}
+                </span>
+              </div>
+            ))}
+            {(!latestRecord || latestRecord.abnormalIndicators.length === 0) && (
+              <div className="text-center py-4 text-gray-500 text-sm">
+                暂无趋势数据
+              </div>
+            )}
           </div>
 
           <Button 
